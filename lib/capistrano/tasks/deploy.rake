@@ -1,5 +1,5 @@
 namespace :deploy do
-  desc 'Checks ruby version'
+  desc 'Install ruby version'
   task :ruby do
     on release_roles(:all) do
       next if test("[ -d ~#{fetch(:deploy_user)}/.rubies/#{fetch(:chruby_ruby)} ]")

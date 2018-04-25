@@ -4,7 +4,7 @@ Provision specific tasks for Capistrano v3:
 
 ```
 cap provision       # provisions Ubuntu 16.04 LTS server(s)
-cap deploy:ruby     # deploy:started hook to check Ruby version
+cap deploy:ruby     # deploy:started hook to install Ruby version
 cap deploy:restart  # deploy:finished hook to restart server service(s)
 cap rails:console   # Run rails console via tunnel
 cap rails:dbconsole # Run rails dbconsole via tunnel
@@ -26,19 +26,19 @@ end
 
 Run the following command to install the gems:
 
-```bash
+```
 bundle install
 ```
 
 Then run the generator to create a basic set of configuration files:
 
-```bash
+```
 bundle exec cap install
 ```
 
 ## Usage
 
-Require everything (`chruby`, `bundler`, `rails/assets`, `rails/migrations`, `provision/provision`, `provision/deploy`, and `provision/rails`):
+Require everything (`chruby`, `bundler`, `rails`, and `provision`):
 
 ```ruby
 # Capfile
@@ -54,9 +54,9 @@ require 'capistrano/bundler'
 require 'capistrano/rails/assets'
 require 'capistrano/rails/migrations'
 require 'capistrano/provision/provision'
+require 'capistrano/provision/deploy'
+require 'capistrano/provision/rails'
 ```
-
-Please note that any `require`s should be placed in `Capfile`, not in `config/deploy.rb`.
 
 You can tweak some Provision-specific options in `config/deploy.rb`:
 
@@ -98,11 +98,12 @@ append :linked_dirs, ".bundle", "log", "tmp/cache", "tmp/pids", "tmp/sockets"
 
 ## Assumptions
 
-1. You want to use [puma](https://github.com/puma/puma) as your web server (default in Rails 5.0+)
-2. You want to use [que](https://github.com/chanks/que) as your worker server
-3. You are using a `.ruby-version` file to set the version of Ruby (default in Rails 5.2+)
-4. You use an `.env` directory in order to set your environment variables (see [envdir](http://thedjbway.b0llix.net/daemontools/envdir.html))
-5. You provision your database elsewhere and set it via the `DATABASE_URL` environment variable
+1. You plan on deploying a `web` and/or `worker` role for Capistrano
+2. You want to use [puma](https://github.com/puma/puma) for your `web` role (default in Rails 5.0+)
+3. You want to use [que](https://github.com/chanks/que) for your `worker` role
+4. You are using a `.ruby-version` file to set the version of Ruby (default in Rails 5.2+)
+5. You use an `.env` directory in order to set your environment variables (see [envdir](http://thedjbway.b0llix.net/daemontools/envdir.html))
+6. You provision your database elsewhere and set it via the `DATABASE_URL` environment variable
 
 ## Contributing
 
