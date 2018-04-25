@@ -18,5 +18,5 @@ Gem::Specification.new do |gem|
   gem.add_dependency 'capistrano', '~> 3.1'
   gem.add_dependency 'capistrano-chruby', '~> 0.1'
   gem.add_dependency 'capistrano-bundler', '~> 1.1'
-  gem.add_dependency 'capistrano-rails', '~> 3.1'
+  gem.add_dependency 'capistrano-rails', '~> 1.1'
 end
