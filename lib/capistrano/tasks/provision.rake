@@ -217,7 +217,7 @@ namespace :provision do
   end
 end
 
-desc "Provisions on apt server(s)"
+desc "Provisions on Debian based server(s)"
 task provision: %w[provision:user
                    provision:dir 
                    provision:env
