@@ -32,8 +32,8 @@ And then execute:
     ## multiple web and worker servers
     # role :web, ["#{fetch(:deploy_user)}@web-host1", "#{fetch(:deploy_user)}@web-host2"]
     # role :worker, ["#{fetch(:deploy_user)}@worker-host1", "#{fetch(:deploy_user)}@worker-host2"]
-    # role :provision_web, ["root@web-host1", "ubuntu@web-host2"], no_release: true
-    # role :provision_worker, ["root@worker-host1", "ubuntu@worker-host2"], no_release: true
+    # role :provision_web, ["root@web-host1", "root@web-host2"], no_release: true
+    # role :provision_worker, ["root@worker-host1", "root@worker-host2"], no_release: true
 
 ## Assumptions
 
