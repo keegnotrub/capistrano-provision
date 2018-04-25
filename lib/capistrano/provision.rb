@@ -1,1 +1,8 @@
-load File.expand_path("../tasks/provision.rake", __FILE__)
+require 'capistrano/chruby'
+require 'capistrano/bundler'
+require 'capistrano/rails/assets'
+require 'capistrano/rails/migrations'
+require 'capistrano/provision/provision'
+require 'capistrano/provision/rails'
+require 'capistrano/provision/deploy'
+require 'capistrano/provision/load'
