@@ -1,39 +1,88 @@
-# Capistrano::provision
+# Capistrano::Provision
+
+Provision specific tasks for Capistrano v3:
+
+  - `cap provision       # provisions Ubuntu 16.04 LTS server(s)`
+  - `cap deploy:ruby     # deploy:started hook to check Ruby version`
+  - `cap deploy:restart  # deploy:finished hook to restart server services`
+  - `cap rails:console   # Run rails console via tunnel`
+  - `cap rails:dbconsole # Run rails dbconsole via tunnel`
+  - `cap rails:log       # Tail rails logs via tunnel`
+  - `cap rails:rake      # Run rake task, cap rails:rake task=db:seed`
 
 ## Installation
 
-Add this line to your application's Gemfile:
+Add these Capistrano gems to your application's Gemfile using `require: false`:
 
-    gem 'capistrano'
-    gem 'capistrano-provision', github: 'keegnotrub/capistrano-provision'
+```ruby
+group :development do
+  gem "capistrano", "~> 3.10", require: false
+  gem "capistrano-provision", git: "https://github.com/keegnotrub/capistrano-provision", require: false
+end
+```
 
-And then execute:
+Run the following command to install the gems:
 
-    $ bundle install
+```
+bundle install
+```
+
+Then run the generator to create a basic set of configuration files:
+
+```
+bundle exec cap install
+```
 
 ## Usage
 
-    # Capfile
-    require 'capistrano/provision'
+Require everything (`chruby`, `bundler`, `rails/assets`, `rails/migrations`, `provision/provision`, `provision/deploy`, and `provision/rails`):
 
+```ruby
+# Capfile
+require 'capistrano/provision'
+```
 
-    # config/deploy/{staging,production}.rb
+Or require just what you need manually:
 
-    ## single server for both web and worker
-    # server "#{fetch(:deploy_user)}@host", roles: %w[web worker]
-    # server "root@host", roles: %w[provision_web provision_worker], no_release: true
+```ruby
+# Capfile
+require 'capistrano/chruby'
+require 'capistrano/bundler'
+require 'capistrano/rails/assets'
+require 'capistrano/rails/migrations'
+require 'capistrano/provision/provision'
+```
 
-    ## web and worker on seperate server
-    # role :web, ["#{fetch(:deploy_user)}@web-host"]
-    # role :worker, ["#{fetch(:deploy_user)}@worker-host"]
-    # role :provision_web, ["root@web-host"], no_release: true
-    # role :provision_worker, ["root@worker-host"], no_release: true
+Please note that any `require`s should be placed in `Capfile`, not in `config/deploy.rb`.
 
-    ## multiple web and worker servers
-    # role :web, ["#{fetch(:deploy_user)}@web-host1", "#{fetch(:deploy_user)}@web-host2"]
-    # role :worker, ["#{fetch(:deploy_user)}@worker-host1", "#{fetch(:deploy_user)}@worker-host2"]
-    # role :provision_web, ["root@web-host1", "root@web-host2"], no_release: true
-    # role :provision_worker, ["root@worker-host1", "root@worker-host2"], no_release: true
+You can tweak some Provision-specific options in `config/deploy.rb`:
+
+```ruby
+# User to create for deploying on the server(s). Defaults to 'deploy'.
+set :deploy_user, 'www'
+```
+
+You'll also want to setup your Capistrano environments in a specific way for provisioning to work:
+
+```ruby
+# config/deploy/{staging,production}.rb
+
+## single server for both web and worker
+# server "#{fetch(:deploy_user)}@host", roles: %w[web worker]
+# server "root@host", roles: %w[provision_web provision_worker], no_release: true
+
+## web and worker on seperate server
+# role :web, ["#{fetch(:deploy_user)}@web-host"]
+# role :worker, ["#{fetch(:deploy_user)}@worker-host"]
+# role :provision_web, ["root@web-host"], no_release: true
+# role :provision_worker, ["root@worker-host"], no_release: true
+
+## multiple web and worker servers
+# role :web, ["#{fetch(:deploy_user)}@web-host1", "#{fetch(:deploy_user)}@web-host2"]
+# role :worker, ["#{fetch(:deploy_user)}@worker-host1", "#{fetch(:deploy_user)}@worker-host2"]
+# role :provision_web, ["root@web-host1", "root@web-host2"], no_release: true
+# role :provision_worker, ["root@worker-host1", "root@worker-host2"], no_release: true
+```
 
 ## Assumptions
 
