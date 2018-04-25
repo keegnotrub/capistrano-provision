@@ -64,7 +64,22 @@ You can tweak some Provision-specific options in `config/deploy.rb`:
 
 ```ruby
 # config/deploy.rb
-set :deploy_user, 'www' # User to create for deploying on the server(s). Defaults to 'deploy'.
+
+# User created for running deploy on the server(s)
+# Defaults to 'deploy'
+set :deploy_user, 'www'
+
+# Ubuntu apt-get package for client DB connections
+# Defaults to 'postgresql-client'
+set :apt_db_client, 'mysql-cilent'
+
+# Command for starting a web process
+# Defaults to 'bundle exec puma -C config/puma.rb'
+set :web_cmd, 'bundle exec unicorn'
+
+# Command for starting a worker process
+# Defaults to 'bundle exec rake jobs:work'
+set :worker_cmd, 'bundle exec sidekiq'
 ```
 
 You'll also want to setup your Capistrano environments in a specific way for provisioning to work:
@@ -101,11 +116,9 @@ append :linked_dirs, ".bundle", "log", "tmp/cache", "tmp/pids", "tmp/sockets"
 ## Assumptions
 
 1. You plan on deploying a `web` and/or `worker` role for Capistrano
-2. You want to use [puma](https://github.com/puma/puma) for your `web` role (default in Rails 5.0+)
-3. You want to use [que](https://github.com/chanks/que) for your `worker` role
-4. You are using a `.ruby-version` file to set the version of Ruby (default in Rails 5.2+)
-5. You use an `.env` directory in order to set your environment variables (see [envdir](http://thedjbway.b0llix.net/daemontools/envdir.html))
-6. You provision your database elsewhere and set it via the `DATABASE_URL` environment variable
+2. You are using a `.ruby-version` file to set the version of Ruby (default in Rails 5.2+)
+3. You use an `.env` directory in order to set your environment variables (see [envdir](http://thedjbway.b0llix.net/daemontools/envdir.html))
+4. You provision your database elsewhere and set it via the `DATABASE_URL` environment variable
 
 ## Contributing
 

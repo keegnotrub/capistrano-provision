@@ -101,7 +101,7 @@ namespace :provision do
                     git
                     runit]
 
-      packages << 'postgresql-client' if host.has_role? fetch(:migration_role)
+      packages << fetch(:apt_db_client) if host.has_role? fetch(:migration_role)
       
       as user: :root do
         with debian_frontend: 'noninteractive' do
@@ -230,6 +230,9 @@ task provision: %w[provision:user
 namespace :load do
   task :defaults do
     set :deploy_user, fetch(:deploy_user, "deploy")
+    set :apt_db_client, fetch(:apt_db_client, "postgresql-client")
+    set :web_cmd, fetch(:web_cmd, "bundle exec puma -C config/puma.rb")
+    set :worker_cmd, fetch(:worker_cmd, "bundle exec rake jobs:work")
     
     set :bundler_roles, %w[web worker]
     set :assets_roles, %w[web worker]
