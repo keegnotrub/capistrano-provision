@@ -118,19 +118,14 @@ namespace :provision do
     on provision_roles(:all) do
       as user: :root do
         within src_dir do
-          unless test("[ -d #{src_dir}/ruby-install ]")
-            execute :git, 'clone --depth=1 https://github.com/postmodern/ruby-install.git'
-          end
-          within 'ruby-install' do
-            execute :git, 'pull'
-            execute :make, 'install'
-          end
-          unless test("[ -d #{src_dir}/chruby ]")
-            execute :git, 'clone --depth=1 https://github.com/postmodern/chruby.git' 
-          end
-          within 'chruby' do
-            execute :git, 'pull'
-            execute :make, 'install'
+          %w[ruby-install chruby].each do |package|
+            unless test("[ -d #{src_dir}/#{package} ]")
+              execute :git, "clone --depth=1 https://github.com/postmodern/#{package}.git"
+            end
+            within package do
+              execute :git, 'pull'
+              execute :make, 'install'
+            end
           end
         end        
       end
@@ -231,3 +226,18 @@ task provision: %w[provision:user
                    provision:binaries
                    provision:ruby
                    provision:runit]
+
+namespace :load do
+  task :defaults do
+    set :deploy_user, fetch(:deploy_user, :deploy)
+    
+    set :bundler_roles, %w[web worker]
+    set :assets_roles, %w[web worker]
+    set :migration_role, :web
+
+    set :chruby_ruby, "ruby-#{IO.read('.ruby-version').strip}"
+    set :chruby_exec, "chpst -e .env chruby-exec"
+
+    append :linked_dirs, ".env", ".bundle", "log", "tmp/cache", "tmp/pids", "tmp/sockets"
+  end
+end
