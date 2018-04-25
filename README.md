@@ -39,7 +39,7 @@ And then execute:
 
 1. You want to use [puma](https://github.com/puma/puma) as your web server (default in Rails 5.0+)
 2. You want to use [que](https://github.com/chanks/que) as your worker server
-3. You are using `.ruby-version` to set the version of ruby (default in Rails 5.2+)
+3. You are using a `.ruby-version` file to set the version of Ruby (default in Rails 5.2+)
 4. You use an `.env` directory in order to set your environment variables (see [envdir](http://thedjbway.b0llix.net/daemontools/envdir.html))
 5. You provision your database elsewhere and set it via the `DATABASE_URL` environment variable
 
