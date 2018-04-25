@@ -1,0 +1,233 @@
+namespace :provision do
+  desc "Creates the deploy user"
+  task :user do
+    on provision_roles(:all) do
+      next if test("id #{fetch(:deploy_user)} >/dev/null 2>&1")
+      
+      as user: :root do
+        execute :adduser, "--disabled-password --gecos 'Capistrano' #{fetch(:deploy_user)}"
+        execute :passwd, "-l #{fetch(:deploy_user)}"        
+      end
+    end
+  end
+
+  desc "Creates the deploy_to directory"
+  task :dir do
+    on provision_roles(:all) do
+      next if test("sudo [ -d #{fetch(:deploy_to)} ]")
+      
+      as user: :root do
+        execute :mkdir, "-p #{fetch(:deploy_to)}"
+        execute :chown, "#{fetch(:deploy_user)}:#{fetch(:deploy_user)} #{fetch(:deploy_to)}"
+        execute :chmod, "g+s #{fetch(:deploy_to)}"
+        execute :mkdir, "-p #{fetch(:deploy_to)}/shared #{fetch(:deploy_to)}/releases"
+        execute :chown, "#{fetch(:deploy_user)} #{fetch(:deploy_to)}/shared #{fetch(:deploy_to)}/releases"
+      end
+    end
+  end
+
+  desc "Uploads the environment variables"
+  task :env do
+    ask(:env_dir, '.env')
+    env_dir = File.expand_path(fetch(:env_dir, '.env'))
+    
+    on provision_roles(:all) do
+      next if test("sudo [ -d #{shared_path}/.env ]")
+      
+      upload! env_dir, '/tmp', recursive: true
+      as user: :root do
+        within shared_path do
+          execute :mv, "/tmp/#{File.basename(env_dir)} .env"
+          execute :chown, "-R #{fetch(:deploy_user)}:#{fetch(:deploy_user)} .env"
+          execute :chmod, '700 .env'
+          execute :chmod, '600 .env/*'
+        end
+      end
+    end
+  end
+  
+  desc "Allows SSH between local and deploy remote user"
+  task :ssh do
+    ask(:ssh_pub_key, '~/.ssh/id_rsa.pub')
+    local_key = File.read(File.expand_path(fetch(:ssh_pub_key, '~/.ssh/id_rsa.pub')))
+    
+    on provision_roles(:all) do
+      next if test("sudo [ -f ~#{fetch(:deploy_user)}/.ssh/authorized_keys ]")
+      
+      as user: fetch(:deploy_user) do
+        within "~#{fetch(:deploy_user)}" do
+          execute :mkdir, '-p .ssh'
+          execute :chmod, '700 .ssh'
+          execute :'ssh-keygen', '-t rsa -b 4096 -f .ssh/id_rsa -N ""'
+        end        
+      end
+      
+      upload! StringIO.new(local_key), '/tmp/authorized_keys'
+      as user: :root do
+        within "~#{fetch(:deploy_user)}" do
+          execute :mv, '/tmp/authorized_keys .ssh/authorized_keys'
+          execute :chown, "#{fetch(:deploy_user)}:#{fetch(:deploy_user)} .ssh/authorized_keys"
+          execute :chmod, '600 .ssh/authorized_keys'
+        end
+      end
+    end
+  end
+
+  desc "Update all Ubuntu packages"
+  task :update do
+    on provision_roles(:all) do
+      as user: :root do
+        with debian_frontend: 'noninteractive' do
+          execute :'apt-get', 'update -qq'
+        end
+      end
+    end
+  end
+
+  desc "Install required Ubuntu packages"
+  task :binaries do
+    on provision_roles(:all) do |host|
+      packages = %w[build-essential
+                    bison 
+                    zlib1g-dev
+                    libyaml-dev
+                    libssl-dev
+                    libgdbm-dev 
+                    libreadline-dev
+                    libncurses5-dev
+                    libffi-dev 
+                    libpq-dev
+                    nodejs
+                    git
+                    runit]
+
+      packages << 'postgresql-client' if host.has_role? fetch(:migration_role)
+      
+      as user: :root do
+        with debian_frontend: 'noninteractive' do
+          execute :'apt-get', "-qq -y install #{packages.join(' ')}"
+        end
+      end
+    end
+  end
+
+  desc "Install ruby-install and chruby"
+  task :ruby do
+    src_dir = '/usr/local/src'
+
+    on provision_roles(:all) do
+      as user: :root do
+        within src_dir do
+          unless test("[ -d #{src_dir}/ruby-install ]")
+            execute :git, 'clone --depth=1 https://github.com/postmodern/ruby-install.git'
+          end
+          within 'ruby-install' do
+            execute :git, 'pull'
+            execute :make, 'install'
+          end
+          unless test("[ -d #{src_dir}/chruby ]")
+            execute :git, 'clone --depth=1 https://github.com/postmodern/chruby.git' 
+          end
+          within 'chruby' do
+            execute :git, 'pull'
+            execute :make, 'install'
+          end
+        end        
+      end
+    end
+  end
+
+  desc "Install runit service(s)"
+  task :runit do
+    on provision_roles(:all) do |host|
+      services = []
+      services << :web    if host.has_role? :provision_web
+      services << :worker if host.has_role? :provision_worker
+
+      services.each do |service|
+        next if test("sudo sv check #{service} >/dev/null")
+        
+        as user: :root do
+          execute :mkdir, "-p /etc/sv/#{service}/log"
+        end
+        template service, "/etc/sv/#{service}/run"
+        template :log, "/etc/sv/#{service}/log/run"
+
+        as user: :root do
+          execute :chown, "root:root /etc/sv/#{service}/run /etc/sv/#{service}/log/run"
+          execute :chmod, "755 /etc/sv/#{service}/run /etc/sv/#{service}/log/run"
+          unless test("[ -L /etc/service/#{service} ]")
+            execute :ln, "-s /etc/sv/#{service} /etc/service/#{service}"
+          end
+          execute <<-CMD
+            set -e
+            while ! sudo sv check #{service} >/dev/null
+              do sleep 1
+            done
+          CMD
+          within "/etc/service/#{service}" do
+            ['.', 'log'].each do |path|
+              within path do
+                execute :chmod, '755 supervise'
+                %w[ok control status].each do |file|
+                  execute :chown, "#{fetch(:deploy_user)}:#{fetch(:deploy_user)} supervise/#{file}"
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+
+  desc "Stats for server(s)"
+  task :stats do
+    on provision_roles(:all) do |host|
+      memory = capture(:free, '-hm', strip: false)
+      puts "#{host.roles.first} [#{host.hostname}]:\n#{memory}"
+    end
+  end
+
+  desc "Reboots the server(s)"
+  task :reboot do
+    on provision_roles(:all) do
+      as user: :root do
+        execute :shutdown, '-r +1'
+      end
+    end
+  end
+
+  def template(name, to)
+    config = Hash.new do |hash, key|
+      hash[key] = fetch(key)
+    end
+
+    template_path = File.expand_path("../../templates/#{name}.erb", __FILE__)
+    template = ERB.new(File.new(template_path).read).result(binding)
+
+    upload! StringIO.new(template), "/tmp/template"
+    as user: :root do
+      execute :mv,  "/tmp/template #{to}"
+    end
+  end
+
+  def provision_roles(*names)
+    options = { filter: :no_release }
+    if names.last.is_a? Hash
+      names.last.merge(options)
+    else
+      names << options
+    end
+    roles(*names)  
+  end
+end
+
+desc "Provision new Ubuntu 16.04 LTS server(s)"
+task provision: %w[provision:user
+                   provision:dir 
+                   provision:env
+                   provision:ssh
+                   provision:update
+                   provision:binaries
+                   provision:ruby
+                   provision:runit]

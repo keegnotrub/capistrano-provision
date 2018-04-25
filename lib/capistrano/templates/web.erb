@@ -1,0 +1,8 @@
+#!/bin/sh
+cd <%= current_path %>
+read -r RUBY_VERSION <.ruby-version
+
+exec 2>&1
+
+exec chpst -u <%= config[:deploy_user] %> -U <%= config[:deploy_user] %> -e .env \
+chruby-exec ruby-$RUBY_VERSION -- bundle exec puma -C config/puma.rb
