@@ -1,5 +1,7 @@
 namespace :load do
   task :defaults do
+    set :deploy_user, fetch(:deploy_user, :deploy)
+    
     set :bundler_roles, %w[web worker]
     set :assets_roles, %w[web worker]
     set :migration_role, :web
