@@ -73,7 +73,7 @@ namespace :provision do
     end
   end
 
-  desc "Update all Ubuntu packages"
+  desc "Update all apt packages"
   task :update do
     on provision_roles(:all) do
       as user: :root do
@@ -84,7 +84,7 @@ namespace :provision do
     end
   end
 
-  desc "Install required Ubuntu packages"
+  desc "Install required apt packages"
   task :binaries do
     on provision_roles(:all) do |host|
       packages = %w[build-essential
@@ -217,7 +217,7 @@ namespace :provision do
   end
 end
 
-desc "Provision new Ubuntu 16.04 LTS server(s)"
+desc "Provisions on apt server(s)"
 task provision: %w[provision:user
                    provision:dir 
                    provision:env

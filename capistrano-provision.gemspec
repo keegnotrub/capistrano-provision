@@ -6,8 +6,8 @@ Gem::Specification.new do |gem|
   gem.name          = "capistrano-provision"
   gem.version       = '0.1.0'
   gem.authors       = ["keegnotrub"]
-  gem.description   = %q{Provision Ubunut 16.04 LTS server(s) with Capistrano}
-  gem.summary       = %q{Provision Ubunut 16.04 LTS server(s) with Capistrano}
+  gem.description   = %q{Rails specific provisioning tasks for Capistrano v3}
+  gem.summary       = %q{Rails specific provisioning tasks for Capistrano v3}
   gem.homepage      = "https://github.com/keegnotrub/capistrano-provision"
   gem.license       = "MIT"
 

@@ -1,9 +1,9 @@
 # Capistrano::Provision
 
-Provision specific tasks for Capistrano v3:
+Rails specific provisioning tasks for Capistrano v3:
 
 ```
-cap provision        # provisions Ubuntu 16.04 LTS server(s)
+cap provision        # provisions on apt server(s)
 cap provision:reboot # reboot provisioned server(s)
 cap provision:stats  # memory stats on provisioned server(s)
 cap deploy:ruby      # deploy:started hook to install Ruby version
@@ -69,7 +69,7 @@ You can tweak some Provision-specific options in `config/deploy.rb`:
 # Defaults to 'deploy'
 set :deploy_user, 'www'
 
-# Ubuntu apt-get package for client DB connections
+# apt package for client DB connections
 # Defaults to 'postgresql-client'
 set :apt_db_client, 'mysql-cilent'
 
