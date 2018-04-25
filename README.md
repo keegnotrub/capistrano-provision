@@ -3,13 +3,15 @@
 Provision specific tasks for Capistrano v3:
 
 ```
-cap provision       # provisions Ubuntu 16.04 LTS server(s)
-cap deploy:ruby     # deploy:started hook to install Ruby version
-cap deploy:restart  # deploy:finished hook to restart server service(s)
-cap rails:console   # Run rails console via tunnel
-cap rails:dbconsole # Run rails dbconsole via tunnel
-cap rails:log       # Tail rails logs via tunnel
-cap rails:rake      # Run rake task, cap rails:rake task=db:seed
+cap provision        # provisions Ubuntu 16.04 LTS server(s)
+cap provision:reboot # reboot provisioned server(s)
+cap provision:stats  # memory stats on provisioned server(s)
+cap deploy:ruby      # deploy:started hook to install Ruby version
+cap deploy:restart   # deploy:finished hook to restart server service(s)
+cap rails:console    # Run rails console via tunnel
+cap rails:dbconsole  # Run rails dbconsole via tunnel
+cap rails:log        # Tail rails logs via tunnel
+cap rails:rake       # Run rake task, cap rails:rake task=db:seed
 ```
 
 ## Installation

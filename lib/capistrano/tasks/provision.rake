@@ -175,7 +175,7 @@ namespace :provision do
     end
   end
 
-  desc "Stats for server(s)"
+  desc "Memory stats for provisioned server(s)"
   task :stats do
     on provision_roles(:all) do |host|
       memory = capture(:free, '-hm', strip: false)
@@ -183,7 +183,7 @@ namespace :provision do
     end
   end
 
-  desc "Reboots the server(s)"
+  desc "Reboots provisioned server(s)"
   task :reboot do
     on provision_roles(:all) do
       as user: :root do
@@ -229,7 +229,7 @@ task provision: %w[provision:user
 
 namespace :load do
   task :defaults do
-    set :deploy_user, fetch(:deploy_user, :deploy)
+    set :deploy_user, fetch(:deploy_user, "deploy")
     
     set :bundler_roles, %w[web worker]
     set :assets_roles, %w[web worker]
