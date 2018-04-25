@@ -2,4 +2,4 @@
 set -e
 
 exec chpst -u <%= config[:deploy_user] %> -U <%= config[:deploy_user] %> \
-svlogd <%= shared_path %>/log
+svlogd <%= current_path.join('log') %>

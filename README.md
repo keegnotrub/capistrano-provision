@@ -2,19 +2,22 @@
 
 Provision specific tasks for Capistrano v3:
 
-  - `cap provision       # provisions Ubuntu 16.04 LTS server(s)`
-  - `cap deploy:ruby     # deploy:started hook to check Ruby version`
-  - `cap deploy:restart  # deploy:finished hook to restart server services`
-  - `cap rails:console   # Run rails console via tunnel`
-  - `cap rails:dbconsole # Run rails dbconsole via tunnel`
-  - `cap rails:log       # Tail rails logs via tunnel`
-  - `cap rails:rake      # Run rake task, cap rails:rake task=db:seed`
+```
+cap provision       # provisions Ubuntu 16.04 LTS server(s)
+cap deploy:ruby     # deploy:started hook to check Ruby version
+cap deploy:restart  # deploy:finished hook to restart server service(s)
+cap rails:console   # Run rails console via tunnel
+cap rails:dbconsole # Run rails dbconsole via tunnel
+cap rails:log       # Tail rails logs via tunnel
+cap rails:rake      # Run rake task, cap rails:rake task=db:seed
+```
 
 ## Installation
 
 Add these Capistrano gems to your application's Gemfile using `require: false`:
 
 ```ruby
+# Gemfile
 group :development do
   gem "capistrano", "~> 3.10", require: false
   gem "capistrano-provision", git: "https://github.com/keegnotrub/capistrano-provision", require: false
@@ -23,13 +26,13 @@ end
 
 Run the following command to install the gems:
 
-```
+```bash
 bundle install
 ```
 
 Then run the generator to create a basic set of configuration files:
 
-```
+```bash
 bundle exec cap install
 ```
 
@@ -58,8 +61,8 @@ Please note that any `require`s should be placed in `Capfile`, not in `config/de
 You can tweak some Provision-specific options in `config/deploy.rb`:
 
 ```ruby
-# User to create for deploying on the server(s). Defaults to 'deploy'.
-set :deploy_user, 'www'
+# config/deploy.rb
+set :deploy_user, 'www' # User to create for deploying on the server(s). Defaults to 'deploy'.
 ```
 
 You'll also want to setup your Capistrano environments in a specific way for provisioning to work:
@@ -82,6 +85,15 @@ You'll also want to setup your Capistrano environments in a specific way for pro
 # role :worker, ["#{fetch(:deploy_user)}@worker-host1", "#{fetch(:deploy_user)}@worker-host2"]
 # role :provision_web, ["root@web-host1", "root@web-host2"], no_release: true
 # role :provision_worker, ["root@worker-host1", "root@worker-host2"], no_release: true
+```
+
+## Symlinks
+
+You'll probably want to symlink per [Bundler](https://github.com/capistrano/bundler#usage) and [Rails](https://github.com/capistrano/rails#symlinks) recommendations:
+
+```ruby
+# config/deploy.rb
+append :linked_dirs, ".bundle", "log", "tmp/cache", "tmp/pids", "tmp/sockets"
 ```
 
 ## Assumptions
