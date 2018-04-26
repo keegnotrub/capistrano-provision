@@ -117,7 +117,7 @@ append :linked_dirs, ".bundle", "log", "tmp/cache", "tmp/pids", "tmp/sockets"
 
 1. You plan on deploying a `web` and/or `worker` Capistrano role to a Debian based server
 2. You are using a `.ruby-version` file to set the version of Ruby (default in Rails 5.2+)
-3. You use an `.env` directory in order to set your environment variables (see [envdir](http://thedjbway.b0llix.net/daemontools/envdir.html))
+3. You use an `.env` file or directory in order to set your environment variables (see [dotenv](https://github.com/bkeepers/dotenv) or [envdir](http://thedjbway.b0llix.net/daemontools/envdir.html))
 4. You provision your database(s) elsewhere and set them via environment variables (`DATABASE_URL`, `REDIS_URL`, etc)
 
 ## Contributing
