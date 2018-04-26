@@ -30,35 +30,35 @@ namespace :provision do
   task :env do
     ask(:env_file_or_dir, '.env')
     env_file_or_dir = File.expand_path(fetch(:env_file_or_dir, '.env'))
+
+    entries = {}
+    if File.directory?(env_file_or_dir)
+      Dir.entries(env_file_or_dir).each do |file|
+        next unless file =~ /\A[A-Za-z_0-9]+\z/
+        key, val = file, IO.read(file).strip
+        entries[key] = val
+      end
+    elsif File.file?(env_file_or_dir)
+      File.read(env_file_or_dir).gsub("\r\n","\n").split("\n") do |line|
+        next unless line =~ /\A([A-Za-z_0-9]+)=(.*)\z/
+        key, val = $1, $2
+        case val
+        when /\A'(.*)'\z/
+          # Remove single quotes
+          entries[key] = $1
+        when /\A"(.*)"\z/
+          # Remove double quotes and unescape string preserving newline characters
+          entries[key] = $1.gsub('\n', "\n").gsub(/\\(.)/, '\1')
+        else
+          entries[key] = val
+        end
+      end
+    else
+      warn 'Enviroment file or directory not found.'
+    end
     
     on provision_roles(:all) do
       next if test("sudo [ -d #{shared_path}/.env ]")
-
-      entries = {}
-      if File.directory?(env_file_or_dir)
-        Dir.entries(env_file_or_dir).each do |file|
-          next unless file =~ /\A[A-Za-z_0-9]+\z/
-          key, val = file, IO.read(file).strip
-          entries[key] = val
-        end
-      elsif File.file?(env_file_or_dir)
-        File.read(env_file_or_dir).gsub("\r\n","\n").split("\n") do |line|
-          next unless line =~ /\A([A-Za-z_0-9]+)=(.*)\z/
-          key, val = $1, $2
-          case val
-          when /\A'(.*)'\z/
-            # Remove single quotes
-            entries[key] = $1
-          when /\A"(.*)"\z/
-            # Remove double quotes and unescape string preserving newline characters
-            entries[key] = $1.gsub('\n', "\n").gsub(/\\(.)/, '\1')
-          else
-            entries[key] = val
-          end
-        end
-      else
-        warn 'Enviroment file or directory not found, skipping.'
-      end
       
       as user: :root do
         within shared_path do
@@ -66,7 +66,7 @@ namespace :provision do
           execute :chown, "#{fetch(:deploy_user)}:#{fetch(:deploy_user)} .env"
           execute :chmod, '700 .env'
           entries.each do |key, val|
-            upload! val, "/tmp/#{key}"
+            upload! StringIO.new(val), "/tmp/#{key}"
             execute :mv, "/tmp/#{key} .env/#{key}"
             execute :chown, "#{fetch(:deploy_user)}:#{fetch(:deploy_user)} .env/#{key}"
             execute :chmod, "600 .env/#{key}"
