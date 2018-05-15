@@ -131,7 +131,7 @@ namespace :provision do
                     git
                     runit]
 
-      packages << fetch(:apt_db_client) if host.has_role? "provision_#{fetch(:migration_role)}
+      packages << fetch(:apt_db_client) if host.has_role? "provision_#{fetch(:migration_role)}"
       
       as user: :root do
         with debian_frontend: 'noninteractive' do
