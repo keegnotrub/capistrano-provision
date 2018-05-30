@@ -1,5 +1,4 @@
 namespace :provision do
-  desc "Creates the deploy user"
   task :user do
     on provision_roles(:all) do
       next if test("id #{fetch(:deploy_user)} >/dev/null 2>&1")
@@ -11,7 +10,6 @@ namespace :provision do
     end
   end
 
-  desc "Creates the deploy_to directory"
   task :dir do
     on provision_roles(:all) do
       next if test("sudo [ -d #{fetch(:deploy_to)} ]")
@@ -26,7 +24,6 @@ namespace :provision do
     end
   end
 
-  desc "Uploads the environment variables"
   task :env do
     ask(:env_file_or_dir, '.env')
     env_file_or_dir = File.expand_path(fetch(:env_file_or_dir, '.env'))
@@ -76,7 +73,6 @@ namespace :provision do
     end
   end
   
-  desc "Allows SSH between local and deploy remote user"
   task :ssh do
     ask(:ssh_pub_key, '~/.ssh/id_rsa.pub')
     local_key = File.read(File.expand_path(fetch(:ssh_pub_key, '~/.ssh/id_rsa.pub')))
@@ -103,7 +99,6 @@ namespace :provision do
     end
   end
 
-  desc "Update all apt packages"
   task :update do
     on provision_roles(:all) do
       as user: :root do
@@ -114,7 +109,6 @@ namespace :provision do
     end
   end
 
-  desc "Install required apt packages"
   task :binaries do
     on provision_roles(:all) do |host|
       packages = %w[build-essential
@@ -141,7 +135,6 @@ namespace :provision do
     end
   end
 
-  desc "Install ruby-install and chruby"
   task :ruby do
     src_dir = '/usr/local/src'
 
@@ -162,7 +155,6 @@ namespace :provision do
     end
   end
 
-  desc "Install runit service(s)"
   task :runit do
     on provision_roles(:all) do |host|
       services = []
@@ -205,15 +197,7 @@ namespace :provision do
     end
   end
 
-  desc "Memory stats for provisioned server(s)"
-  task :stats do
-    on provision_roles(:all) do |host|
-      memory = capture(:free, '-hm', strip: false)
-      puts "#{host.roles.first} [#{host.hostname}]:\n#{memory}"
-    end
-  end
-
-  desc "Reboots provisioned server(s)"
+  desc "Reboot provisioned server(s)"
   task :reboot do
     on provision_roles(:all) do
       as user: :root do
@@ -247,7 +231,7 @@ namespace :provision do
   end
 end
 
-desc "Provisions on Debian based server(s)"
+desc "Provision Debian based server(s)"
 task provision: %w[provision:user
                    provision:dir 
                    provision:env
@@ -261,7 +245,7 @@ namespace :load do
   task :defaults do
     set :deploy_user, fetch(:deploy_user, "deploy")
     set :apt_db_client, fetch(:apt_db_client, "postgresql-client")
-    set :web_cmd, fetch(:web_cmd, "bundle exec puma -C config/puma.rb")
+    set :web_cmd, fetch(:web_cmd, "bundle exec rails server")
     set :worker_cmd, fetch(:worker_cmd, "bundle exec rake jobs:work")
     
     set :bundler_roles, %w[web worker]

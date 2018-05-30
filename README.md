@@ -1,17 +1,22 @@
 # Capistrano::Provision
 
-Rails specific provisioning tasks for Capistrano v3:
+Rails specific provisioning and maintenance tasks for Capistrano v3:
 
 ```
-cap provision        # provisions on Debian based server(s)
-cap provision:reboot # reboot provisioned server(s)
-cap provision:stats  # memory stats on provisioned server(s)
-cap deploy:ruby      # deploy:started hook to install Ruby version
-cap deploy:restart   # deploy:finished hook to restart server service(s)
-cap rails:console    # Run rails console via tunnel
-cap rails:dbconsole  # Run rails dbconsole via tunnel
-cap rails:log        # Tail rails logs via tunnel
-cap rails:rake       # Run rake task, cap rails:rake task=db:seed
+cap provision        # Provision Debian based server(s)
+cap provision:reboot # Reboot provisioned server(s)
+cap config           # List config variable(s)
+cap config:edit      # Edit config variable, cap config:edit key=RAILS_ENV
+cap config:get       # Get config variable, cap config:get key=RAILS_ENV
+cap config:set       # Set config variable, cap config:set key=RAILS_ENV value=staging
+cap config:unset     # Unset config variable, cap config:unset key=RAILS_ENV
+cap logs             # View log output
+cap ps               # List services(s)
+cap ps:restart       # Restart service(s)
+cap rails:console    # Run rails console
+cap rails:dbconsole  # Run rails dbconsole
+cap ruby:install     # Install ruby version
+cap run              # Run command, cap run rails=db:seed
 ```
 
 ## Installation
@@ -56,8 +61,12 @@ require 'capistrano/bundler'
 require 'capistrano/rails/assets'
 require 'capistrano/rails/migrations'
 require 'capistrano/provision/provision'
-require 'capistrano/provision/deploy'
+require 'capistrano/provision/config'
+require 'capistrano/provision/logs'
+require 'capistrano/provision/ps'
 require 'capistrano/provision/rails'
+require 'capistrano/provision/ruby'
+require 'capistrano/provision/run'
 ```
 
 You can tweak some Provision-specific options in `config/deploy.rb`:
@@ -74,8 +83,8 @@ set :deploy_user, 'www'
 set :apt_db_client, 'mysql-cilent'
 
 # Command for starting a web process
-# Defaults to 'bundle exec puma -C config/puma.rb'
-set :web_cmd, 'bundle exec unicorn'
+# Defaults to 'bundle exec rails server'
+set :web_cmd, 'bundle exec puma -C config/puma.rb'
 
 # Command for starting a worker process
 # Defaults to 'bundle exec rake jobs:work'
