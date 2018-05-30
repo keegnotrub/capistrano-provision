@@ -51,4 +51,4 @@ namespace :config do
 end
 
 desc "List config variable(s)"
-task config: 'config:list'
+task config: %w[config:list]
