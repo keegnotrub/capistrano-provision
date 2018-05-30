@@ -4,8 +4,8 @@ task :run do
     cmd = fetch(:bundle_bins).find do |bundle_bin|
       ENV.include? bundle_bin
     end
-    within current_path do      
-      puts capture(cmd, ENV[cmd])
+    within current_path do
+      execute cmd, ENV[cmd]
     end
   end
 end

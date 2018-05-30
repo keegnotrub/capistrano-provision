@@ -3,10 +3,7 @@ namespace :ps do
     on release_roles(:all) do |host|
       memory = capture(:free, '-hm', strip: false)
       uptime = capture(:uptime, '-p', strip: false)
-      packages = ''
-      within '/usr/lib/update-notifier' do
-        packages << capture(:'apt-check', '--human-readable', strip: false)
-      end
+      packages = capture('/usr/lib/update-notifier/apt-check', '--human-readable', strip: false)
       if test('[ -f /var/run/reboot-required ]')
         packages << '\n'
         packages << capture(:cat, '/var/run/reboot-required', strip: false)
