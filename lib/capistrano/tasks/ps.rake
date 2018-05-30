@@ -8,7 +8,7 @@ namespace :ps do
         packages << '\n'
         packages << capture(:cat, '/var/run/reboot-required', strip: false)
       end
-      puts "===#{host.hostname}: #{host.roles.join('/')}\n#{memory}\n#{uptime}.\n#{packages}"
+      puts "===#{host.hostname}: #{host.roles.to_a.join('/')}\n#{memory}\n#{uptime}.\n#{packages}"
     end
   end
 
