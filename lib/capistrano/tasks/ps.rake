@@ -27,4 +27,4 @@ namespace :ps do
 end
 
 desc "List service(s)"
-task config: %w[ps:list]
+task ps: %w[ps:list]
