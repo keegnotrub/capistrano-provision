@@ -25,8 +25,8 @@ namespace :config do
   task :get do
     key = ENV['key']
     on fetch(:migration_servers) do
-      within "#{shared_path}/.env" do
-        puts capture(:cat, key, strip: false)
+      within shared_path do
+        puts capture(:env, "-i chpst -e .env printenv #{key}", strip: false)
       end
     end
   end
