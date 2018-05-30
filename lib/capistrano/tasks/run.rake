@@ -5,7 +5,7 @@ task :run do
       ENV.include? bundle_bin
     end
     within current_path do
-      execute cmd, ENV[cmd]
+      puts capture(cmd, ENV[cmd])
     end
   end
 end
