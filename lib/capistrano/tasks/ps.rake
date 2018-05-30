@@ -5,10 +5,9 @@ namespace :ps do
       uptime = capture(:uptime, '-p', strip: false)
       packages = capture('/usr/lib/update-notifier/apt-check', '--human-readable', strip: false)
       if test('[ -f /var/run/reboot-required ]')
-        packages << '\n'
         packages << capture(:cat, '/var/run/reboot-required', strip: false)
       end
-      puts "===#{host.roles.to_a.join('/')}: #{host.hostname}\n#{memory}#{uptime}#{packages}"
+      puts "===#{host.roles.to_a.join('/')}: #{host.hostname}\n#{memory}#{uptime}#{packages}\n"
     end
   end
 
