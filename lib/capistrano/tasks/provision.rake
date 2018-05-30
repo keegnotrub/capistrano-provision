@@ -254,8 +254,8 @@ namespace :load do
 
     set :chruby_ruby, "ruby-#{IO.read('.ruby-version').strip}"
     set :chruby_exec, "chpst -e .env chruby-exec"
-
-    append :chruby_map_bins, "rails"
+    set :chruby_map_bins, fetch(:bundle_bins)
+    
     append :linked_dirs, ".env"
   end
 end
