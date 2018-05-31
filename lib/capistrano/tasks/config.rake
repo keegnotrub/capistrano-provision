@@ -2,7 +2,7 @@ namespace :config do
   task :list do
     on fetch(:migration_servers) do
       within shared_path do
-        puts capture(:env, '-i chpst -e .env printenv', strip: false)
+        puts capture(:env, '-i chpst -e .env printenv | sort', strip: false)
       end
     end
   end
