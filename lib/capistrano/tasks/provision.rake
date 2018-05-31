@@ -77,7 +77,7 @@ namespace :provision do
     ask(:ssh_pub_key, '~/.ssh/id_rsa.pub')
     local_key = File.read(File.expand_path(fetch(:ssh_pub_key, '~/.ssh/id_rsa.pub')))
     
-    on provision_roles(:all) do
+    on provision_roles(:all) do |host|
       next if test("sudo [ -f ~#{fetch(:deploy_user)}/.ssh/authorized_keys ]")
       
       as user: fetch(:deploy_user) do
@@ -85,6 +85,8 @@ namespace :provision do
           execute :mkdir, '-p .ssh'
           execute :chmod, '700 .ssh'
           execute :'ssh-keygen', '-t rsa -b 4096 -f .ssh/id_rsa -N ""'
+          deploy_key = capture(:cat, '.ssh/id_rsa.pub', strip: false)
+          puts "===#{host.roles.to_a.join('/')}: #{host.hostname}\n#{deploy_key}\n"
         end        
       end
       
