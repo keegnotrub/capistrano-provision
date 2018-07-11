@@ -10,10 +10,9 @@ namespace :config do
   desc "Edit config variable, cap config:edit key=RAILS_ENV"
   task :edit do
     key = ENV['key']
-    ask(:key_value, echo: false)
-    value = fetch(:key_value)
+    ask(:key_value, nil, echo: false)
     on release_roles(:all) do |host|
-      upload! StringIO.new(value), "/tmp/#{key}"
+      upload! StringIO.new(fetch(:key_value)), "/tmp/#{key}"
       within "#{shared_path}/.env" do
         execute :mv, "/tmp/#{key} #{key}"
         execute :chmod, "600 #{key}"
@@ -49,7 +48,8 @@ namespace :config do
     key = ENV['key']
     on release_roles(:all) do |host|
       within "#{shared_path}/.env" do
-        execute :rm, key
+        execute :true, "> #{key}"
+        execute :chmod, "600 #{key}"
       end
     end    
   end

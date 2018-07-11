@@ -1,6 +1,6 @@
-namespace :ruby do
+namespace :deploy do
   desc 'Install ruby version'
-  task :install do
+  task :ruby do
     on release_roles(:all) do
       next if test("[ -d ~#{fetch(:deploy_user)}/.rubies/#{fetch(:chruby_ruby)} ]")
 
@@ -9,5 +9,5 @@ namespace :ruby do
     end
   end
   
-  before 'deploy:started', 'ruby:install'
+  before 'deploy:started', 'deploy:ruby'
 end

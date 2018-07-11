@@ -1,10 +1,11 @@
 # Capistrano::Provision
 
-Rails specific provisioning and maintenance tasks for Capistrano v3:
+Ruby on Rails specific provisioning and maintenance tasks for Capistrano v3:
 
 ```
 cap provision        # Provision Debian based server(s)
 cap provision:reboot # Reboot provisioned server(s)
+cap deploy:ruby      # Install ruby version
 cap config           # List config variable(s)
 cap config:edit      # Edit config variable, cap config:edit key=RAILS_ENV
 cap config:get       # Get config variable, cap config:get key=RAILS_ENV
@@ -15,7 +16,6 @@ cap ps               # List services(s)
 cap ps:restart       # Restart service(s)
 cap rails:console    # Run rails console
 cap rails:dbconsole  # Run rails dbconsole
-cap ruby:install     # Install ruby version
 cap run              # Run command, cap run rails=db:seed
 ```
 
@@ -77,18 +77,6 @@ You can tweak some Provision-specific options in `config/deploy.rb`:
 # User created for running deploy on the server(s)
 # Defaults to 'deploy'
 set :deploy_user, 'www'
-
-# apt package for client DB connections
-# Defaults to 'postgresql-client'
-set :apt_db_client, 'mysql-cilent'
-
-# Command for starting a web process
-# Defaults to 'bundle exec rails server'
-set :web_cmd, 'bundle exec puma -C config/puma.rb'
-
-# Command for starting a worker process
-# Defaults to 'bundle exec rake jobs:work'
-set :worker_cmd, 'bundle exec sidekiq'
 ```
 
 You'll also want to setup your Capistrano environments in a specific way for provisioning to work:
@@ -96,21 +84,35 @@ You'll also want to setup your Capistrano environments in a specific way for pro
 ```ruby
 # config/deploy/{staging,production}.rb
 
-## single server for both web and worker
+## single server for all roles
 # server "#{fetch(:deploy_user)}@host", roles: %w[web worker]
-# server "root@host", roles: %w[provision_web provision_worker], no_release: true
+# server "admin@host", roles: %w[web worker], no_release: true
 
-## web and worker on seperate server
+## seperate server for each role
 # role :web, ["#{fetch(:deploy_user)}@web-host"]
 # role :worker, ["#{fetch(:deploy_user)}@worker-host"]
-# role :provision_web, ["root@web-host"], no_release: true
-# role :provision_worker, ["root@worker-host"], no_release: true
+# role :web, ["admin@web-host"], no_release: true
+# role :worker, ["admin@worker-host"], no_release: true
 
-## multiple web and worker servers
-# role :web, ["#{fetch(:deploy_user)}@web-host1", "#{fetch(:deploy_user)}@web-host2"]
-# role :worker, ["#{fetch(:deploy_user)}@worker-host1", "#{fetch(:deploy_user)}@worker-host2"]
-# role :provision_web, ["root@web-host1", "root@web-host2"], no_release: true
-# role :provision_worker, ["root@worker-host1", "root@worker-host2"], no_release: true
+## multiple seperate servers for each role
+# role :web, ["#{fetch(:deploy_user)}@web-host-1", "#{fetch(:deploy_user)}@web-host2"]
+# role :worker, ["#{fetch(:deploy_user)}@worker-host-1", "#{fetch(:deploy_user)}@worker-host2"]
+# role :web, ["admin@web-host-1", "admin@web-host-2"], no_release: true
+# role :worker, ["admin@worker-host-1", "admin@worker-host-2"], no_release: true
+```
+
+## Roles
+
+You'll probably want to adjust your roles per [Rails](https://github.com/capistrano/rails#recommendations) recommendations:
+
+```ruby
+# config/deploy.rb
+
+# Defaults to :db
+set :migration_role, :web
+
+# Defaults to [:web]
+set set :assets_roles, [:web, :worker]
 ```
 
 ## Symlinks
@@ -124,10 +126,8 @@ append :linked_dirs, ".bundle", "log", "tmp/cache", "tmp/pids", "tmp/sockets"
 
 ## Assumptions
 
-1. You plan on deploying a `web` and/or `worker` Capistrano role to a Debian based server
-2. You are using a `.ruby-version` file to set the version of Ruby (default in Rails 5.2+)
-3. You use an `.env` file or directory in order to set your environment variables (see [dotenv](https://github.com/bkeepers/dotenv) or [envdir](http://thedjbway.b0llix.net/daemontools/envdir.html))
-4. You provision your database(s) elsewhere and set them via environment variables (`DATABASE_URL`, `REDIS_URL`, etc)
+1. You are using a `.ruby-version` file to set the version of Ruby (default in Rails 5.2+)
+2. You provision your database(s) elsewhere and set them via environment variables (`DATABASE_URL`, `REDIS_URL`, etc)
 
 ## Contributing
 

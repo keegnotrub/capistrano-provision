@@ -1,4 +1,6 @@
 namespace :provision do
+  ask(:database_url, nil, echo: false)
+  
   task :user do
     on provision_roles(:all) do
       next if test("id #{fetch(:deploy_user)} >/dev/null 2>&1")
@@ -25,44 +27,31 @@ namespace :provision do
   end
 
   task :env do
-    ask(:env_file_or_dir, '.env')
-    env_file_or_dir = File.expand_path(fetch(:env_file_or_dir, '.env'))
-
-    entries = {}
-    if File.directory?(env_file_or_dir)
-      Dir.entries(env_file_or_dir).each do |file|
-        next unless file =~ /\A[A-Za-z_0-9]+\z/
-        key, val = file, IO.read(file).strip
-        entries[key] = val
-      end
-    elsif File.file?(env_file_or_dir)
-      File.read(env_file_or_dir).gsub("\r\n","\n").split("\n") do |line|
-        next unless line =~ /\A([A-Za-z_0-9]+)=(.*)\z/
-        key, val = $1, $2
-        case val
-        when /\A'(.*)'\z/
-          # Remove single quotes
-          entries[key] = $1
-        when /\A"(.*)"\z/
-          # Remove double quotes and unescape string preserving newline characters
-          entries[key] = $1.gsub('\n', "\n").gsub(/\\(.)/, '\1')
-        else
-          entries[key] = val
-        end
-      end
-    else
-      warn 'Enviroment file or directory not found.'
-    end
+    ask(:secret_key_base, SecureRandom.hex(64), echo: false)
+    ask(:port, '8080')
     
-    on provision_roles(:all) do
-      next if test("sudo [ -d #{shared_path}/.env ]")
+    variables = {}
+    variables[:RAILS_LOG_TO_STDOUT] = 'enabled'
+    variables[:RAILS_SERVE_STATIC_FILES] = 'enabled'
+    variables[:LANG] = ENV.fetch('LANG', 'en_US.UTF-8')
       
+    on provision_roles(:all) do |host|
+      next if test("sudo [ -d #{shared_path}/.env ]")
+
+      variables[:HOME] = capture(:echo, "~#{fetch(:deploy_user)}")
+      variables[:USER] = fetch(:deploy_user)
+      variables[:RACK_ENV] = fetch(:rails_env)
+      variables[:RAILS_ENV] = fetch(:rails_env)
+      variables[:DATABASE_URL] = fetch(:database_url)
+      variables[:SECRET_KEY_BASE] = fetch(:secret_key_base)
+      variables[:PORT] = fetch(:port)
+
       as user: :root do
         within shared_path do
           execute :mkdir, '-p .env'
           execute :chown, "#{fetch(:deploy_user)}:#{fetch(:deploy_user)} .env"
           execute :chmod, '700 .env'
-          entries.each do |key, val|
+          variables.each do |key, val|
             upload! StringIO.new(val), "/tmp/#{key}"
             execute :mv, "/tmp/#{key} .env/#{key}"
             execute :chown, "#{fetch(:deploy_user)}:#{fetch(:deploy_user)} .env/#{key}"
@@ -73,45 +62,9 @@ namespace :provision do
     end
   end
   
-  task :ssh do
-    ask(:ssh_pub_key, '~/.ssh/id_rsa.pub')
-    local_key = File.read(File.expand_path(fetch(:ssh_pub_key, '~/.ssh/id_rsa.pub')))
+  task :packages do    
+    ask(:apt_packages, apt_packages_default)
     
-    on provision_roles(:all) do |host|
-      next if test("sudo [ -f ~#{fetch(:deploy_user)}/.ssh/authorized_keys ]")
-      
-      as user: fetch(:deploy_user) do
-        within "~#{fetch(:deploy_user)}" do
-          execute :mkdir, '-p .ssh'
-          execute :chmod, '700 .ssh'
-          execute :'ssh-keygen', '-t rsa -b 4096 -f .ssh/id_rsa -N ""'
-          deploy_key = capture(:cat, '.ssh/id_rsa.pub', strip: false)
-          puts "===#{host.roles.to_a.join('/')}: #{host.hostname}\n#{deploy_key}\n"
-        end        
-      end
-      
-      upload! StringIO.new(local_key), '/tmp/authorized_keys'
-      as user: :root do
-        within "~#{fetch(:deploy_user)}" do
-          execute :mv, '/tmp/authorized_keys .ssh/authorized_keys'
-          execute :chown, "#{fetch(:deploy_user)}:#{fetch(:deploy_user)} .ssh/authorized_keys"
-          execute :chmod, '600 .ssh/authorized_keys'
-        end
-      end
-    end
-  end
-
-  task :update do
-    on provision_roles(:all) do
-      as user: :root do
-        with debian_frontend: 'noninteractive' do
-          execute :'apt-get', 'update -qq'
-        end
-      end
-    end
-  end
-
-  task :binaries do
     on provision_roles(:all) do |host|
       packages = %w[build-essential
                     bison 
@@ -122,28 +75,28 @@ namespace :provision do
                     libreadline-dev
                     libncurses5-dev
                     libffi-dev 
-                    libpq-dev
                     nodejs
                     git
                     runit]
 
-      packages << fetch(:apt_db_client) if host.has_role? "provision_#{fetch(:migration_role)}"
-      
+      packages += fetch(:apt_packages).split(' ')
+
       as user: :root do
         with debian_frontend: 'noninteractive' do
+          execute :'apt-get', 'update -qq'
           execute :'apt-get', "-qq -y install #{packages.join(' ')}"
         end
       end
     end
   end
 
-  task :ruby do
+  task :chruby do
     src_dir = '/usr/local/src'
 
     on provision_roles(:all) do
       as user: :root do
         within src_dir do
-          %w[ruby-install chruby].each do |package|
+          %w[ruby-install chruby].each do |package|            
             unless test("[ -d #{src_dir}/#{package} ]")
               execute :git, "clone --depth=1 https://github.com/postmodern/#{package}.git"
             end
@@ -159,32 +112,31 @@ namespace :provision do
 
   task :runit do
     on provision_roles(:all) do |host|
-      services = []
-      services << :web    if host.has_role? :provision_web
-      services << :worker if host.has_role? :provision_worker
-
-      services.each do |service|
-        next if test("sudo sv check #{service} >/dev/null")
+      host.roles_array.each do |role|
+        ask("#{role}_cmd", cmd_default(role))
+        
+        next if test("sudo sv check #{role} >/dev/null")
         
         as user: :root do
-          execute :mkdir, "-p /etc/sv/#{service}/log"
+          execute :mkdir, "-p /etc/sv/#{role}/log"
         end
-        template service, "/etc/sv/#{service}/run"
-        template :log, "/etc/sv/#{service}/log/run"
+
+        template :run, "/etc/sv/#{role}/run", cmd: fetch("#{role}_cmd")
+        template :log, "/etc/sv/#{role}/log/run"
 
         as user: :root do
-          execute :chown, "root:root /etc/sv/#{service}/run /etc/sv/#{service}/log/run"
-          execute :chmod, "755 /etc/sv/#{service}/run /etc/sv/#{service}/log/run"
-          unless test("[ -L /etc/service/#{service} ]")
-            execute :ln, "-s /etc/sv/#{service} /etc/service/#{service}"
+          execute :chown, "root:root /etc/sv/#{role}/run /etc/sv/#{role}/log/run"
+          execute :chmod, "755 /etc/sv/#{role}/run /etc/sv/#{role}/log/run"
+          unless test("[ -L /etc/service/#{role} ]")
+            execute :ln, "-s /etc/sv/#{role} /etc/service/#{role}"
           end
           execute <<-CMD
             set -e
-            while ! sudo sv check #{service} >/dev/null
+            while ! sudo sv check #{role} >/dev/null
               do sleep 1
             done
           CMD
-          within "/etc/service/#{service}" do
+          within "/etc/service/#{role}" do
             ['.', 'log'].each do |path|
               within path do
                 execute :chmod, '755 supervise'
@@ -199,6 +151,36 @@ namespace :provision do
     end
   end
 
+  task :ssh do
+    ask(:ssh_pub_key, '~/.ssh/id_rsa.pub')
+    
+    on provision_roles(:all) do |host|
+      unless test("sudo [ -f ~#{fetch(:deploy_user)}/.ssh/authorized_keys ]")
+        local_key = File.read(File.expand_path(fetch(:ssh_pub_key, '~/.ssh/id_rsa.pub')))
+        upload! StringIO.new(local_key), '/tmp/authorized_keys'
+        as user: :root do
+          within "~#{fetch(:deploy_user)}" do
+            execute :mkdir, '-p .ssh'
+            execute :chown, "#{fetch(:deploy_user)}:#{fetch(:deploy_user)} .ssh"
+            execute :chmod, '700 .ssh'
+            execute :mv, '/tmp/authorized_keys .ssh/authorized_keys'
+            execute :chown, "#{fetch(:deploy_user)}:#{fetch(:deploy_user)} .ssh/authorized_keys"
+            execute :chmod, '600 .ssh/authorized_keys'
+          end
+        end
+      end
+      unless test("sudo [ -f ~#{fetch(:deploy_user)}/.ssh/id_rsa.pub ]")
+        as user: fetch(:deploy_user) do
+          within "~#{fetch(:deploy_user)}" do
+            execute :'ssh-keygen', '-t rsa -b 4096 -f .ssh/id_rsa -N ""'
+            deploy_key = capture(:cat, '.ssh/id_rsa.pub', strip: false)
+            puts "===#{host.roles_array.join('/')}: #{host.hostname}\n#{deploy_key}\n"
+          end        
+        end
+      end
+    end
+  end
+
   desc "Reboot provisioned server(s)"
   task :reboot do
     on provision_roles(:all) do
@@ -208,7 +190,7 @@ namespace :provision do
     end
   end
 
-  def template(name, to)
+  def template(name, to, options = {})
     config = Hash.new do |hash, key|
       hash[key] = fetch(key)
     end
@@ -219,6 +201,30 @@ namespace :provision do
     upload! StringIO.new(template), "/tmp/template"
     as user: :root do
       execute :mv,  "/tmp/template #{to}"
+    end
+  end
+
+  def apt_packages_default
+    case URI.parse(fetch(:database_url)).scheme
+    when /^mysql/
+      'mysql-client libmysqlclient-dev'
+    when /^postgres|^postgis/
+      'postgresql-client libpq-dev'
+    when 'sqlite3'
+      'sqlite3 libsqlite3-dev'
+    else
+      nil
+    end
+  end
+
+  def cmd_default(role)
+    case role
+    when [:web, :app]
+      'bundle exec rails server'
+    when :worker
+      'bundle exec rake jobs:work'
+    else
+      'bundle exec rake'
     end
   end
 
@@ -237,27 +243,19 @@ desc "Provision Debian based server(s)"
 task provision: %w[provision:user
                    provision:dir 
                    provision:env
-                   provision:ssh
-                   provision:update
-                   provision:binaries
-                   provision:ruby
-                   provision:runit]
+                   provision:packages
+                   provision:chruby
+                   provision:runit
+                   provision:ssh]
 
 namespace :load do
   task :defaults do
     set :deploy_user, fetch(:deploy_user, "deploy")
-    set :apt_db_client, fetch(:apt_db_client, "postgresql-client")
-    set :web_cmd, fetch(:web_cmd, "bundle exec rails server")
-    set :worker_cmd, fetch(:worker_cmd, "bundle exec rake jobs:work")
-    
-    set :bundler_roles, %w[web worker]
-    set :assets_roles, %w[web worker]
-    set :migration_role, :web
 
     set :chruby_ruby, "ruby-#{IO.read('.ruby-version').strip}"
     set :chruby_exec, "chpst -e .env chruby-exec"
-    set :chruby_map_bins, fetch(:bundle_bins)
-    
+    append :chruby_map_bins, "rails"
+
     append :linked_dirs, ".env"
   end
 end

@@ -1,6 +1,6 @@
 desc "View log output"
 task :logs do
-  ask(:log_role, 'web')
+  ask(:log_role, fetch(:migration_role))
   on primary(fetch(:log_role)) do |host|
     command = 'tail -f log/current'
     command_cd = "cd #{current_path}"
@@ -8,3 +8,4 @@ task :logs do
     exec "#{tunnel} -t '#{command_cd} && #{command}'"
   end
 end
+
