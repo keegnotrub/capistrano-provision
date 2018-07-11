@@ -52,7 +52,7 @@ namespace :provision do
           execute :chown, "#{fetch(:deploy_user)}:#{fetch(:deploy_user)} .env"
           execute :chmod, '700 .env'
           variables.each do |key, val|
-            upload! StringIO.new(val), "/tmp/#{key}"
+            upload! StringIO.new(val.to_s), "/tmp/#{key}"
             execute :mv, "/tmp/#{key} .env/#{key}"
             execute :chown, "#{fetch(:deploy_user)}:#{fetch(:deploy_user)} .env/#{key}"
             execute :chmod, "600 .env/#{key}"
