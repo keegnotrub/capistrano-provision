@@ -112,7 +112,7 @@ You'll probably want to adjust your roles per [Rails](https://github.com/capistr
 set :migration_role, :web
 
 # Defaults to [:web]
-set set :assets_roles, [:web, :worker]
+set :assets_roles, [:web, :worker]
 ```
 
 ## Symlinks
