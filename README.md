@@ -90,14 +90,14 @@ You'll also want to setup your Capistrano environments in a specific way for pro
 
 ## seperate server for each role
 # role :web, ["#{fetch(:deploy_user)}@web-host"]
-# role :worker, ["#{fetch(:deploy_user)}@worker-host"]
 # role :web, ["admin@web-host"], no_release: true
+# role :worker, ["#{fetch(:deploy_user)}@worker-host"]
 # role :worker, ["admin@worker-host"], no_release: true
 
 ## multiple seperate servers for each role
 # role :web, ["#{fetch(:deploy_user)}@web-host-1", "#{fetch(:deploy_user)}@web-host2"]
-# role :worker, ["#{fetch(:deploy_user)}@worker-host-1", "#{fetch(:deploy_user)}@worker-host2"]
 # role :web, ["admin@web-host-1", "admin@web-host-2"], no_release: true
+# role :worker, ["#{fetch(:deploy_user)}@worker-host-1", "#{fetch(:deploy_user)}@worker-host2"]
 # role :worker, ["admin@worker-host-1", "admin@worker-host-2"], no_release: true
 ```
 
