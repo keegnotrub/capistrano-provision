@@ -77,7 +77,7 @@ namespace :provision do
                     libffi-dev 
                     nodejs
                     git
-                    runit]
+                    runit-systemd]
 
       packages += fetch(:apt_packages).split(' ')
 
@@ -252,7 +252,7 @@ namespace :load do
   task :defaults do
     set :deploy_user, fetch(:deploy_user, "deploy")
 
-    set :chruby_ruby, "ruby-#{IO.read('.ruby-version').strip}"
+    set :chruby_ruby, IO.read('.ruby-version').strip
     set :chruby_exec, "chpst -e .env chruby-exec"
     append :chruby_map_bins, "rails"
     append :linked_dirs, ".env"
